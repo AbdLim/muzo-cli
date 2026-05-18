@@ -1,0 +1,38 @@
+[project]
+name = "muzo"
+version = "0.1.0"
+description = "An ambient internet radio experience in your terminal"
+readme = "README.md"
+authors = [
+    { name = "Abdulalim Ladan", email = "aaladan453@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "platformdirs>=4.13.5",
+    "textual>=8.2.8",
+]
+
+[project.scripts]
+muzo = "muzo.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.13.0,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "ruff>=0.17.2",
+]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
