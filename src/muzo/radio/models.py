@@ -1,4 +1,4 @@
-"""Radio station models and navigational coordinates for the airwaves."""
+"""Radio station models and metadata for internet audio streams."""
 
 from dataclasses import dataclass
 
@@ -12,3 +12,5 @@ class Station:
     stream_url: str
     tags: tuple[str, ...] = ()
     codec: str | None = None
+    bitrate_kbps: int | None = None
+    homepage: str | None = None
