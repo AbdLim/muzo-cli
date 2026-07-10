@@ -1,8 +1,11 @@
 """Textual widget adapter for rendering Muzo ambient scenes."""
 
+import time
+
 from rich.segment import Segment
 from rich.style import Style
 from textual.strip import Strip
+from textual.timer import Timer
 from textual.widget import Widget
 
 from muzo.scenes.base import Frame, Scene
@@ -23,6 +26,7 @@ class SceneView(Widget):
         self,
         scene: Scene | None = None,
         *,
+        fps: int = 10,
         name: str | None = None,
         id: str | None = None,
         classes: str | None = None,
@@ -30,6 +34,9 @@ class SceneView(Widget):
     ) -> None:
         super().__init__(name=name, id=id, classes=classes, disabled=disabled)
         self._scene: Scene | None = scene
+        self._fps = max(1, min(30, fps))
+        self._timer: Timer | None = None
+        self._last_tick: float = time.monotonic()
         self._cached_frame: Frame | None = None
         self._cached_size: tuple[int, int] | None = None
         self._error_message: str | None = None
@@ -61,15 +68,38 @@ class SceneView(Widget):
         self.refresh()
 
     def on_mount(self) -> None:
-        """Trigger on_enter lifecycle hook when widget mounts."""
+        """Trigger on_enter lifecycle hook and start animation timer when mounted."""
         if self._scene is not None:
             try:
                 self._scene.on_enter()
             except Exception as exc:
                 self._error_message = f"Error entering scene: {exc}"
 
+        self._last_tick = time.monotonic()
+        if self._fps > 0:
+            self._timer = self.set_interval(1.0 / self._fps, self._on_tick)
+
+    def _on_tick(self) -> None:
+        """Advance animation state on timer tick."""
+        now = time.monotonic()
+        dt = max(0.0, now - self._last_tick)
+        self._last_tick = now
+
+        if self._scene is not None:
+            try:
+                self._scene.update(dt)
+                self._cached_frame = None
+                self.refresh()
+            except Exception as exc:
+                self._error_message = f"Scene error: {exc}"
+                self.refresh()
+
     def on_unmount(self) -> None:
-        """Trigger on_exit lifecycle hook when widget unmounts."""
+        """Trigger on_exit lifecycle hook and stop timer when widget unmounts."""
+        if self._timer is not None:
+            self._timer.stop()
+            self._timer = None
+
         if self._scene is not None:
             try:
                 self._scene.on_exit()

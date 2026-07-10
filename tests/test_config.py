@@ -12,8 +12,9 @@ def test_missing_implicit_config_yields_defaults(tmp_path, monkeypatch):
 
     config = load_config()
     assert config == AppConfig()
-    assert config.scene == "welcome"
+    assert config.scene == "rainy-window"
     assert config.volume == 70
+
     assert config.animation_fps == 10
     assert config.show_controls is True
 

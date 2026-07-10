@@ -99,8 +99,10 @@ class SceneRegistry:
 
 def register_builtin_scenes(registry: SceneRegistry) -> None:
     """Register all built-in Muzo scenes into the provided registry."""
+    from muzo.scenes.builtin.rain import RainyWindowScene
     from muzo.scenes.builtin.welcome import WelcomeScene
 
+    registry.register(RainyWindowScene)
     registry.register(WelcomeScene)
 
 

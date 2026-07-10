@@ -14,7 +14,7 @@ class ConfigError(Exception):
 
 @dataclass(frozen=True, slots=True)
 class AppConfig:
-    scene: str = "welcome"
+    scene: str = "rainy-window"
     station: str | None = None
     volume: int = 70
     animation_fps: int = 10
