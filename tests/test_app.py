@@ -19,9 +19,10 @@ async def test_app_mount_and_quit():
         scene_view = pilot.app.query_one(SceneView)
         assert scene_view is not None
         assert scene_view.scene is not None
-        assert scene_view.scene.id == "welcome"
+        assert scene_view.scene.id == "rainy-window"
 
         # Press 'q' to quit
+
         await pilot.press("q")
         assert pilot.app._exit
 

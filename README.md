@@ -5,13 +5,25 @@ An ambient internet radio player for your terminal.
 Pair chill lofi and ambient streaming stations with cozy procedural ASCII art worlds right in your shell.
 
 ```bash
-# Run with uv
+# Quickstart with uv
 uv run muzo
 ```
 
+### Requirements
+
+- Python >= 3.12
+- [mpv](https://mpv.io) (for live audio playback)
+  - macOS: `brew install mpv`
+  - Ubuntu/Debian: `sudo apt install mpv`
+  - Arch Linux: `sudo pacman -S mpv`
+
 ### Controls
 
-- `?` — Toggle help
+- `r` — Browse & select radio stations
+- `Space` — Toggle pause / resume stream
+- `x` — Stop playback
+- `+` / `-` — Volume up / down
+- `?` — Toggle help overlay
 - `q` — Quit
 
-*Note: Work in progress! Audio streaming and new worlds are being wired up right now.*
+*Note: Radio stations are discovered via the community Radio Browser directory. More procedural worlds and soundscapes are coming soon!*
