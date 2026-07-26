@@ -1,10 +1,9 @@
-"""Low-level mpv process lifecycle and JSON IPC engine."""
-
 import asyncio
 import json
 import logging
 import os
 import shutil
+import sys
 import tempfile
 from collections.abc import Callable
 from pathlib import Path
@@ -62,6 +61,9 @@ class MpvEngine:
             p = Path(self._custom_mpv_path)
             if p.exists() or shutil.which(self._custom_mpv_path):
                 return self._custom_mpv_path
+            raise MpvNotInstalledError(
+                f"mpv is not installed or not found at '{self._custom_mpv_path}'."
+            )
 
         path = shutil.which("mpv")
         if not path:
@@ -96,9 +98,13 @@ class MpvEngine:
                 "--force-window=no",
                 "--terminal=no",
                 "--no-config",
+                "--ytdl=no",
+                "--network-timeout=10",
                 f"--input-ipc-server={self._socket_path}",
                 f"--volume={self._initial_volume}",
             ]
+            if sys.platform == "darwin":
+                cmd.append("--ao=avfoundation,coreaudio")
 
             try:
                 self._process = await asyncio.create_subprocess_exec(

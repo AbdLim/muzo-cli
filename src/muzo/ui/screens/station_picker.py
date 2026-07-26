@@ -19,6 +19,7 @@ class StationPickerScreen(ModalScreen[Station | None]):
 
     BINDINGS = [
         Binding("escape", "dismiss_picker", "Close"),
+        Binding("enter", "select_station", "Select", show=False),
         Binding("r", "retry_search", "Retry"),
         Binding("left", "prev_mood", "Prev Mood"),
         Binding("right", "next_mood", "Next Mood"),
@@ -144,6 +145,12 @@ class StationPickerScreen(ModalScreen[Station | None]):
         if 0 <= event.option_index < len(self._current_stations):
             chosen = self._current_stations[event.option_index]
             self.dismiss(chosen)
+
+    def action_select_station(self) -> None:
+        """Explicit action for Enter key to select currently highlighted station."""
+        idx = self._option_list.highlighted
+        if idx is not None and 0 <= idx < len(self._current_stations):
+            self.dismiss(self._current_stations[idx])
 
     def action_dismiss_picker(self) -> None:
         """Close picker without changing station."""

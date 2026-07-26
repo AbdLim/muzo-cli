@@ -142,7 +142,10 @@ class MuzoApp(App[None]):
             self.run_worker(self.controller.play_station(station))
 
     def action_toggle_pause(self) -> None:
-        """Toggle play/pause on the active stream."""
+        """Toggle play/pause on the active stream, or open picker if none loaded."""
+        if self.controller.state.station is None:
+            self.action_open_station_picker()
+            return
         self.run_worker(self.controller.toggle_pause())
 
     def action_stop_audio(self) -> None:
