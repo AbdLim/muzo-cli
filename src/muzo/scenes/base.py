@@ -64,6 +64,7 @@ class Scene(ABC):
     id: str
     name: str
     description: str
+    is_ambient: bool = True
 
     def on_enter(self) -> None:  # noqa: B027
         """Called when this scene becomes active."""

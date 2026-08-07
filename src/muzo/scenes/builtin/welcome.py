@@ -9,6 +9,7 @@ class WelcomeScene(Scene):
     id: str = "welcome"
     name: str = "Welcome"
     description: str = "Static welcome and introduction to Muzo"
+    is_ambient: bool = False
 
     # Our humble starting island before we set sail for the Grand Line
     _LINES: tuple[tuple[str, str | None], ...] = (

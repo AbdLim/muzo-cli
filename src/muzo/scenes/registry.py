@@ -27,6 +27,7 @@ class SceneInfo:
     id: str
     name: str
     description: str
+    is_ambient: bool = True
 
 
 class SceneRegistry:
@@ -81,16 +82,32 @@ class SceneRegistry:
         scene_cls = self.get(scene_id)
         return scene_cls()
 
-    def list_scenes(self) -> tuple[SceneInfo, ...]:
-        """Return an immutable list of metadata for all registered scenes, sorted by ID."""
-        return tuple(
+    def list_scenes(self, ambient_only: bool = False) -> tuple[SceneInfo, ...]:
+        """Return an immutable list of metadata for registered scenes, sorted by ID."""
+        scenes = tuple(
             SceneInfo(
                 id=cls.id,
                 name=cls.name,
                 description=cls.description,
+                is_ambient=getattr(cls, "is_ambient", True),
             )
             for _, cls in sorted(self._scenes.items(), key=lambda item: item[0])
         )
+        if ambient_only:
+            return tuple(s for s in scenes if s.is_ambient)
+        return scenes
+
+    def list_ambient_scenes(self) -> tuple[SceneInfo, ...]:
+        """Return ambient scenes in curated presentation order for the UI picker."""
+        preferred_order = ("rainy-window", "horizon", "stargazing", "fireplace")
+        ambient_map = {s.id: s for s in self.list_scenes(ambient_only=True)}
+        ordered: list[SceneInfo] = []
+        for scene_id in preferred_order:
+            if scene_id in ambient_map:
+                ordered.append(ambient_map.pop(scene_id))
+        for scene_id in sorted(ambient_map.keys()):
+            ordered.append(ambient_map[scene_id])
+        return tuple(ordered)
 
     def is_registered(self, scene_id: str) -> bool:
         """Check if a scene ID is registered."""
@@ -99,10 +116,16 @@ class SceneRegistry:
 
 def register_builtin_scenes(registry: SceneRegistry) -> None:
     """Register all built-in Muzo scenes into the provided registry."""
+    from muzo.scenes.builtin.fireplace import FireplaceScene
+    from muzo.scenes.builtin.horizon import HorizonScene
     from muzo.scenes.builtin.rain import RainyWindowScene
+    from muzo.scenes.builtin.stars import StargazingScene
     from muzo.scenes.builtin.welcome import WelcomeScene
 
     registry.register(RainyWindowScene)
+    registry.register(HorizonScene)
+    registry.register(StargazingScene)
+    registry.register(FireplaceScene)
     registry.register(WelcomeScene)
 
 
