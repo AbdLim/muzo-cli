@@ -27,6 +27,7 @@ class SceneView(Widget):
         scene: Scene | None = None,
         *,
         fps: int = 10,
+        reduce_motion: bool = False,
         name: str | None = None,
         id: str | None = None,
         classes: str | None = None,
@@ -35,37 +36,78 @@ class SceneView(Widget):
         super().__init__(name=name, id=id, classes=classes, disabled=disabled)
         self._scene: Scene | None = scene
         self._fps = max(1, min(30, fps))
+        self._reduce_motion = reduce_motion
         self._timer: Timer | None = None
         self._last_tick: float = time.monotonic()
         self._cached_frame: Frame | None = None
         self._cached_size: tuple[int, int] | None = None
         self._error_message: str | None = None
 
+        # Transition management
+        self._pending_scene: Scene | None = None
+        self._transition_duration: float = 0.2
+        self._transition_remaining: float = 0.0
+        self._transition_swapped: bool = False
+
     @property
     def scene(self) -> Scene | None:
         """The currently active scene."""
         return self._scene
 
-    def set_scene(self, scene: Scene) -> None:
+    def set_scene(self, scene: Scene, transition: bool = True) -> None:
         """Switch to a new scene, executing lifecycle hooks safely."""
-        if self._scene is not None:
-            try:
-                self._scene.on_exit()
-            except Exception:
-                pass  # Lifecycle error must not crash the application
+        if self._scene is not None and getattr(self._scene, "id", None) == getattr(
+            scene, "id", None
+        ):
+            return  # Idempotent: already active
 
-        self._scene = scene
-        self._cached_frame = None
-        self._cached_size = None
-        self._error_message = None
+        if not transition or self._reduce_motion or not self.is_mounted or self._scene is None:
+            self._finalize_pending_transition()
+            if self._scene is not None:
+                try:
+                    self._scene.on_exit()
+                except Exception:
+                    pass
 
-        if self.is_mounted and self._scene is not None:
-            try:
-                self._scene.on_enter()
-            except Exception as exc:
-                self._error_message = f"Error entering scene: {exc}"
+            self._scene = scene
+            self._cached_frame = None
+            self._cached_size = None
+            self._error_message = None
 
-        self.refresh()
+            if self.is_mounted and self._scene is not None:
+                try:
+                    self._scene.on_enter()
+                except Exception as exc:
+                    self._error_message = f"Error entering scene: {exc}"
+
+            self.refresh()
+            return
+
+        # Start non-blocking fade transition
+        self._finalize_pending_transition()
+        self._pending_scene = scene
+        self._transition_duration = 0.2
+        self._transition_remaining = 0.2
+        self._transition_swapped = False
+
+    def _finalize_pending_transition(self) -> None:
+        """Immediately finalize in-flight transition to maintain balanced lifecycle."""
+        if self._pending_scene is not None:
+            if not self._transition_swapped:
+                if self._scene is not None:
+                    try:
+                        self._scene.on_exit()
+                    except Exception:
+                        pass
+                self._scene = self._pending_scene
+                if self.is_mounted and self._scene is not None:
+                    try:
+                        self._scene.on_enter()
+                    except Exception as exc:
+                        self._error_message = f"Error entering scene: {exc}"
+            self._pending_scene = None
+            self._transition_remaining = 0.0
+            self._cached_frame = None
 
     def on_mount(self) -> None:
         """Trigger on_enter lifecycle hook and start animation timer when mounted."""
@@ -82,8 +124,34 @@ class SceneView(Widget):
     def _on_tick(self) -> None:
         """Advance animation state on timer tick."""
         now = time.monotonic()
-        dt = max(0.0, now - self._last_tick)
+        # Clamp dt to prevent teleportation after sleep/suspend
+        dt = min(1.0, max(0.0, now - self._last_tick))
         self._last_tick = now
+
+        # Handle in-flight transition
+        if self._pending_scene is not None:
+            self._transition_remaining -= dt
+            if (
+                not self._transition_swapped
+                and self._transition_remaining <= self._transition_duration * 0.5
+            ):
+                if self._scene is not None:
+                    try:
+                        self._scene.on_exit()
+                    except Exception:
+                        pass
+                self._scene = self._pending_scene
+                self._transition_swapped = True
+                self._cached_frame = None
+                if self._scene is not None:
+                    try:
+                        self._scene.on_enter()
+                    except Exception as exc:
+                        self._error_message = f"Error entering scene: {exc}"
+
+            if self._transition_remaining <= 0.0:
+                self._pending_scene = None
+                self._cached_frame = None
 
         if self._scene is not None:
             try:
@@ -100,6 +168,7 @@ class SceneView(Widget):
             self._timer.stop()
             self._timer = None
 
+        self._finalize_pending_transition()
         if self._scene is not None:
             try:
                 self._scene.on_exit()
@@ -107,7 +176,8 @@ class SceneView(Widget):
                 pass
 
     def on_resize(self) -> None:
-        """Invalidate cached frame on resize — may the force be with this terminal width."""
+        """Invalidate cached frame on resize and cancel any pending transition."""
+        self._finalize_pending_transition()
         self._cached_frame = None
         self._cached_size = None
 
