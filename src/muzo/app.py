@@ -1,5 +1,4 @@
-"""Textual application shell for Muzo."""
-
+import dataclasses
 from pathlib import Path
 
 from textual.app import App, ComposeResult
@@ -8,7 +7,7 @@ from textual.containers import Horizontal
 from textual.screen import ModalScreen
 from textual.widgets import Label, Static
 
-from muzo.config import AppConfig
+from muzo.config import AppConfig, save_config
 from muzo.player.controller import PlayerController
 from muzo.radio.models import Station
 from muzo.radio.service import RadioService
@@ -18,6 +17,7 @@ from muzo.scenes.registry import (
     SceneRegistry,
     create_default_registry,
 )
+from muzo.ui.screens.scene_picker import ScenePickerScreen
 from muzo.ui.screens.station_picker import StationPickerScreen
 from muzo.ui.widgets.player_status import PlayerStatusWidget
 from muzo.ui.widgets.scene_view import SceneView
@@ -38,6 +38,8 @@ class HelpScreen(ModalScreen[None]):
                 "[#7eb6ad][b]muzo — ambient terminal radio[/b][/]\n\n"
                 "[b]Shortcuts:[/b]\n"
                 "  [#7eb6ad]r[/]        Browse & select radio stations\n"
+                "  [#7eb6ad]s[/]        Switch ambient visual worlds\n"
+                "  [#7eb6ad]f[/]        Toggle full-screen focus mode\n"
                 "  [#7eb6ad]Space[/]    Toggle pause / resume stream\n"
                 "  [#7eb6ad]x[/]        Stop playback\n"
                 "  [#7eb6ad]+ / -[/]    Adjust volume by 5%\n"
@@ -66,6 +68,8 @@ class MuzoApp(App[None]):
         Binding("q", "quit_app", "Quit", show=False),
         Binding("question_mark", "toggle_help", "Help", show=False),
         Binding("r", "open_station_picker", "Stations", show=False),
+        Binding("s", "open_scene_picker", "Worlds", show=False),
+        Binding("f", "toggle_focus_mode", "Focus", show=False),
         Binding("space", "toggle_pause", "Pause", show=False),
         Binding("x", "stop_audio", "Stop", show=False),
         Binding("plus", "volume_up", "Volume Up", show=False),
@@ -90,6 +94,7 @@ class MuzoApp(App[None]):
             )
 
         self._active_scene: Scene = self.registry.create(self.config.scene)
+        self._is_focus_mode = self.config.focus_mode
         self.radio_service = radio_service or RadioService()
         self.controller = controller or PlayerController(
             initial_volume=self.config.volume,
@@ -105,6 +110,7 @@ class MuzoApp(App[None]):
         yield SceneView(
             scene=self._active_scene,
             fps=self.config.animation_fps,
+            reduce_motion=self.config.reduce_motion,
             id="scene-view",
         )
 
@@ -113,6 +119,8 @@ class MuzoApp(App[None]):
         with Horizontal(id="footer"):
             yield Static(
                 "[#7eb6ad][b]r[/b][/] [dim]Stations[/dim]   "
+                "[#7eb6ad][b]s[/b][/] [dim]Worlds[/dim]   "
+                "[#7eb6ad][b]f[/b][/] [dim]Focus[/dim]   "
                 "[#7eb6ad][b]Space[/b][/] [dim]Pause[/dim]   "
                 "[#7eb6ad][b]+/-[/b][/] [dim]Vol[/dim]   "
                 "[#7eb6ad][b]x[/b][/] [dim]Stop[/dim]   "
@@ -121,12 +129,72 @@ class MuzoApp(App[None]):
                 id="footer-keys",
             )
 
+    def on_mount(self) -> None:
+        """Apply initial focus mode class if enabled in config."""
+        if self._is_focus_mode:
+            self.add_class("focus-mode")
+
     def action_toggle_help(self) -> None:
         """Toggle the help screen overlay. It's dangerous to go alone, take this!"""
         if isinstance(self.screen, HelpScreen):
             self.pop_screen()
         else:
             self.push_screen(HelpScreen())
+
+    def action_open_scene_picker(self) -> None:
+        """Open the ambient world picker modal."""
+        if not isinstance(self.screen, ScenePickerScreen):
+            self.push_screen(
+                ScenePickerScreen(self.registry, self._active_scene.id),
+                self._on_scene_selected,
+            )
+
+    def _on_scene_selected(self, scene_id: str | None) -> None:
+        """Handle ambient world chosen from picker."""
+        if scene_id is None or scene_id == self._active_scene.id:
+            return
+
+        if not self.registry.is_registered(scene_id):
+            return
+
+        try:
+            new_scene = self.registry.create(scene_id)
+        except Exception:
+            return
+
+        self._active_scene = new_scene
+        try:
+            scene_view = self.query_one(SceneView)
+            scene_view.set_scene(new_scene)
+        except Exception:
+            pass
+
+        try:
+            header_label = self.query_one("#header-status", Label)
+            header_label.update(new_scene.name)
+        except Exception:
+            pass
+
+        # Persist scene preference
+        self.config = dataclasses.replace(self.config, scene=scene_id)
+        try:
+            save_config(self.config)
+        except Exception:
+            pass
+
+    def action_toggle_focus_mode(self) -> None:
+        """Toggle full-screen focus mode on and off."""
+        self._is_focus_mode = not self._is_focus_mode
+        if self._is_focus_mode:
+            self.add_class("focus-mode")
+        else:
+            self.remove_class("focus-mode")
+
+        self.config = dataclasses.replace(self.config, focus_mode=self._is_focus_mode)
+        try:
+            save_config(self.config)
+        except Exception:
+            pass
 
     def action_open_station_picker(self) -> None:
         """Open the radio station picker modal."""

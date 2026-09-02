@@ -137,3 +137,57 @@ StationPickerScreen {
     text-align: center;
     margin-top: 1;
 }
+
+/* Focus Mode: maximize scene view and hide surrounding chrome */
+.focus-mode #header {
+    display: none;
+}
+
+.focus-mode #player-status {
+    display: none;
+}
+
+.focus-mode #footer {
+    display: none;
+}
+
+/* Scene Picker Modal */
+ScenePickerScreen {
+    align: center middle;
+    background: rgba(14, 17, 20, 0.75);
+}
+
+#scene-picker-dialog {
+    width: 74;
+    max-width: 94%;
+    height: 18;
+    max-height: 85%;
+    background: #1c2128;
+    border: round #7eb6ad;
+    padding: 1 2;
+    layout: vertical;
+}
+
+#scene-picker-title {
+    color: #7eb6ad;
+    text-align: center;
+    margin-bottom: 1;
+}
+
+#scene-picker-content {
+    height: 1fr;
+    background: #15181e;
+    border: solid #283038;
+}
+
+#scene-picker-options {
+    height: 1fr;
+    background: transparent;
+}
+
+#scene-picker-footer {
+    height: 1;
+    text-align: center;
+    margin-top: 1;
+}
+

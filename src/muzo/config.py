@@ -19,10 +19,22 @@ class AppConfig:
     volume: int = 70
     animation_fps: int = 10
     show_controls: bool = True
+    focus_mode: bool = False
+    reduce_motion: bool = False
 
 
 _ALLOWED_KEYS: frozenset[str] = frozenset(
-    {"scene", "station", "volume", "animation_fps", "show_controls"}
+    {
+        "scene",
+        "station",
+        "volume",
+        "animation_fps",
+        "show_controls",
+        "focus_mode",
+        "reduce_motion",
+        "visuals",
+        "audio",
+    }
 )
 
 
@@ -33,7 +45,6 @@ def get_default_config_path() -> Path:
 
 def validate_config_dict(data: dict[str, Any]) -> None:
     """Validate raw configuration values from parsed TOML."""
-    # No stowaways allowed on the Going Merry — catch typos early
     unknown = set(data.keys()) - _ALLOWED_KEYS
     if unknown:
         keys_str = ", ".join(sorted(unknown))
@@ -51,8 +62,6 @@ def validate_config_dict(data: dict[str, Any]) -> None:
 
     if "volume" in data:
         volume = data["volume"]
-        # In Python, isinstance(True, int) is True because history is weird.
-        # Don't let someone set volume = True and wonder why it's at 1%.
         if isinstance(volume, bool) or not isinstance(volume, int):
             raise ConfigError("Configuration key 'volume' must be an integer between 0 and 100.")
         if not (0 <= volume <= 100):
@@ -75,6 +84,16 @@ def validate_config_dict(data: dict[str, Any]) -> None:
         show_controls = data["show_controls"]
         if not isinstance(show_controls, bool):
             raise ConfigError("Configuration key 'show_controls' must be a boolean.")
+
+    if "focus_mode" in data:
+        focus_mode = data["focus_mode"]
+        if not isinstance(focus_mode, bool):
+            raise ConfigError("Configuration key 'focus_mode' must be a boolean.")
+
+    if "reduce_motion" in data:
+        reduce_motion = data["reduce_motion"]
+        if not isinstance(reduce_motion, bool):
+            raise ConfigError("Configuration key 'reduce_motion' must be a boolean.")
 
 
 def load_config(path: Path | None = None, explicit: bool = False) -> AppConfig:
@@ -116,5 +135,50 @@ def load_config(path: Path | None = None, explicit: bool = False) -> AppConfig:
             f"Configuration file root must be a TOML table, got {type(raw_data).__name__}."
         )
 
-    validate_config_dict(raw_data)
-    return AppConfig(**raw_data)
+    # Flatten nested tables if present (e.g. [visuals] or [audio])
+    flattened: dict[str, Any] = {}
+    for key, val in raw_data.items():
+        if isinstance(val, dict):
+            flattened.update(val)
+        else:
+            flattened[key] = val
+
+    validate_config_dict(flattened)
+    allowed_fields = {k: v for k, v in flattened.items() if k in AppConfig.__match_args__}
+    return AppConfig(**allowed_fields)
+
+
+def save_config(config: AppConfig, path: Path | None = None) -> None:
+    """Save configuration atomically to the destination path or platform default."""
+    config_path = path or get_default_config_path()
+    try:
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+    except OSError as err:
+        raise ConfigError(
+            f"Could not create configuration directory '{config_path.parent}': {err}"
+        ) from err
+
+    lines = [
+        f'scene = "{config.scene}"',
+        f"volume = {config.volume}",
+        f"animation_fps = {config.animation_fps}",
+        f"show_controls = {str(config.show_controls).lower()}",
+        f"focus_mode = {str(config.focus_mode).lower()}",
+        f"reduce_motion = {str(config.reduce_motion).lower()}",
+    ]
+    if config.station is not None:
+        lines.append(f'station = "{config.station}"')
+
+    content = "\n".join(lines) + "\n"
+
+    tmp_path = config_path.parent / f".{config_path.name}.tmp"
+    try:
+        tmp_path.write_text(content, encoding="utf-8")
+        tmp_path.replace(config_path)
+    except OSError as err:
+        try:
+            if tmp_path.exists():
+                tmp_path.unlink()
+        except OSError:
+            pass
+        raise ConfigError(f"Could not save configuration to '{config_path}': {err}") from err
