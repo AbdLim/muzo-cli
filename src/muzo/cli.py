@@ -31,6 +31,20 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Path to an explicit TOML configuration file.",
     )
+    parser.add_argument(
+        "-s",
+        "--scene",
+        type=str,
+        default=None,
+        help="Override active ambient scene ID.",
+    )
+    parser.add_argument(
+        "-f",
+        "--focus",
+        action="store_true",
+        default=False,
+        help="Launch directly into full-screen focus mode.",
+    )
     return parser
 
 
@@ -48,6 +62,15 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         config = load_config(args.config, explicit=args.config is not None)
+        if args.scene is not None:
+            import dataclasses
+
+            config = dataclasses.replace(config, scene=args.scene)
+        if args.focus:
+            import dataclasses
+
+            config = dataclasses.replace(config, focus_mode=True)
+
         registry = create_default_registry()
 
         if not registry.is_registered(config.scene):

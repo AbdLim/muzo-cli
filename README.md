@@ -20,10 +20,20 @@ uv run muzo
 ### Controls
 
 - `r` — Browse & select radio stations
+- `s` — Switch ambient visual worlds
+- `f` — Toggle full-screen focus mode
 - `Space` — Toggle pause / resume stream
 - `x` — Stop playback
 - `+` / `-` — Volume up / down
 - `?` — Toggle help overlay
 - `q` — Quit
 
-*Note: Radio stations are discovered via the community Radio Browser directory. More procedural worlds and soundscapes are coming soon!*
+### Ambient Worlds
+
+Muzo features four procedurally animated worlds:
+- **Rainy Window** — A quiet nighttime city skyline under falling raindrops.
+- **Endless Horizon** — A warm, slow sunset over gentle ocean waves.
+- **Stargazing** — Serene mountain silhouettes under twinkling stars and occasional shooting stars.
+- **Fireplace** — A cozy crackling brick hearth with dancing flames and rising embers.
+
+*Note: Radio stations are discovered via the community Radio Browser directory. More soundscapes and features coming soon!*
