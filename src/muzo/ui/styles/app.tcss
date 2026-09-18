@@ -26,6 +26,13 @@ Screen {
 
 #header-status {
     color: #7e8a97;
+    width: 1fr;
+}
+
+#header-station {
+    color: #7eb6ad;
+    text-align: right;
+    width: auto;
 }
 
 #scene-view {
@@ -105,6 +112,13 @@ StationPickerScreen {
 #picker-title {
     color: #7eb6ad;
     text-align: center;
+    margin-bottom: 1;
+}
+
+#picker-now-playing {
+    color: #7eb6ad;
+    text-align: center;
+    height: 1;
     margin-bottom: 1;
 }
 

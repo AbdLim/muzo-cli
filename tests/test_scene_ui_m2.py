@@ -161,3 +161,48 @@ async def test_scene_picker_dismiss_with_escape():
         await pilot.press("escape")
         assert not isinstance(app.screen, ScenePickerScreen)
         assert app._active_scene.id == "rainy-window"
+
+
+@pytest.mark.asyncio
+async def test_header_and_picker_display_active_station():
+    """Top header and station picker reflect currently playing station."""
+    mock_engine = MockEngine()
+    controller = PlayerController(engine=mock_engine)
+    radio_service = RadioService(client=MockRadioClient())
+    registry = create_default_registry()
+    app = MuzoApp(
+        config=AppConfig(scene="rainy-window"),
+        registry=registry,
+        controller=controller,
+        radio_service=radio_service,
+    )
+
+    station = Station(
+        id="station-lofi-1",
+        name="Lofi Cafe",
+        stream_url="https://lofi.test/stream",
+        codec="MP3",
+        bitrate_kbps=128,
+    )
+
+    async with app.run_test(size=Size(80, 24)) as pilot:
+        header_station = app.query_one("#header-station", Label)
+        assert str(header_station.render()) == ""
+
+        # Play station
+        await controller.play_station(station)
+        await pilot.pause()
+
+        # Header station label reflects playing station
+        assert "Lofi Cafe" in str(header_station.render())
+
+        # Open station picker
+        from muzo.ui.screens.station_picker import StationPickerScreen
+
+        await pilot.press("r")
+        await pilot.pause()
+        assert isinstance(app.screen, StationPickerScreen)
+
+        # Now playing banner is displayed in picker
+        now_playing = app.screen.query_one("#picker-now-playing")
+        assert "Lofi Cafe" in str(now_playing.render())

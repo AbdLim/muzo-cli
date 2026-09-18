@@ -32,6 +32,8 @@ class StationPickerScreen(ModalScreen[Station | None]):
     def __init__(
         self,
         service: RadioService,
+        current_station_id: str | None = None,
+        current_station_name: str | None = None,
         *,
         name: str | None = None,
         id: str | None = None,
@@ -39,6 +41,8 @@ class StationPickerScreen(ModalScreen[Station | None]):
     ) -> None:
         super().__init__(name=name, id=id, classes=classes)
         self._service = service
+        self._current_station_id = current_station_id
+        self._current_station_name = current_station_name
         self._moods = DEFAULT_MOODS
         self._active_mood_idx = 0
         self._current_stations: list[Station] = []
@@ -51,6 +55,11 @@ class StationPickerScreen(ModalScreen[Station | None]):
     def compose(self) -> ComposeResult:
         with Container(id="picker-dialog"):
             yield Static("[#7eb6ad][b]RADIO STATION DISCOVERY[/b][/]", id="picker-title")
+            if self._current_station_name:
+                yield Static(
+                    f"[dim]Now Playing:[/] [#7eb6ad][b]{self._current_station_name}[/][/]",
+                    id="picker-now-playing",
+                )
             yield self._mood_static
             with Vertical(id="picker-content"):
                 yield self._status_static
@@ -109,9 +118,20 @@ class StationPickerScreen(ModalScreen[Station | None]):
                 return
 
             self._option_list.clear_options()
-            for st in stations:
+            initial_highlight = 0
+            for idx, st in enumerate(stations):
                 prompt = Text()
-                prompt.append(st.name, style="bold #c4c9d0")
+                is_current = (
+                    self._current_station_id is not None and st.id == self._current_station_id
+                )
+                if is_current:
+                    initial_highlight = idx
+                    prompt.append(" ● ", style="bold #7eb6ad")
+                    prompt.append(f"{st.name} [Now Playing]", style="bold #7eb6ad")
+                else:
+                    prompt.append("   ", style="dim")
+                    prompt.append(st.name, style="bold #c4c9d0")
+
                 details = []
                 if st.bitrate_kbps:
                     details.append(f"{st.bitrate_kbps}kbps")
@@ -122,7 +142,7 @@ class StationPickerScreen(ModalScreen[Station | None]):
 
                 self._option_list.add_option(Option(prompt, id=st.id))
 
-            self._option_list.highlighted = 0
+            self._option_list.highlighted = initial_highlight
             self._status_static.display = False
             self._option_list.display = True
             self._option_list.focus()

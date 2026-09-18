@@ -9,6 +9,7 @@ from textual.widgets import Label, Static
 
 from muzo.config import AppConfig, save_config
 from muzo.player.controller import PlayerController
+from muzo.player.models import PlaybackState, PlaybackStatus
 from muzo.radio.models import Station
 from muzo.radio.service import RadioService
 from muzo.scenes.base import Scene
@@ -106,6 +107,7 @@ class MuzoApp(App[None]):
             yield Label("muzo", id="header-title")
             yield Label(" · ", id="header-sep")
             yield Label(self._active_scene.name, id="header-status")
+            yield Label("", id="header-station")
 
         yield SceneView(
             scene=self._active_scene,
@@ -130,9 +132,33 @@ class MuzoApp(App[None]):
             )
 
     def on_mount(self) -> None:
-        """Apply initial focus mode class if enabled in config."""
+        """Apply initial focus mode class if enabled in config and listen to player state."""
         if self._is_focus_mode:
             self.add_class("focus-mode")
+        self.controller.add_listener(self._on_player_state_change)
+        self._on_player_state_change(self.controller.state)
+
+    def on_unmount(self) -> None:
+        """Unregister player state listener when unmounting."""
+        self.controller.remove_listener(self._on_player_state_change)
+
+    def _on_player_state_change(self, state: PlaybackState) -> None:
+        """Update top header bar station display and app title when stream state changes."""
+        try:
+            station_label = self.query_one("#header-station", Label)
+            if state.station is not None:
+                symbol = (
+                    "▶"
+                    if state.status == PlaybackStatus.PLAYING
+                    else ("⏸" if state.status == PlaybackStatus.PAUSED else "◌")
+                )
+                station_label.update(f"{symbol} {state.station.name}")
+                self.title = f"muzo · {state.station.name}"
+            else:
+                station_label.update("")
+                self.title = "muzo"
+        except Exception:
+            pass
 
     def action_toggle_help(self) -> None:
         """Toggle the help screen overlay. It's dangerous to go alone, take this!"""
@@ -199,8 +225,15 @@ class MuzoApp(App[None]):
     def action_open_station_picker(self) -> None:
         """Open the radio station picker modal."""
         if not isinstance(self.screen, StationPickerScreen):
+            current_st = self.controller.state.station
+            current_id = current_st.id if current_st else None
+            current_name = current_st.name if current_st else None
             self.push_screen(
-                StationPickerScreen(self.radio_service),
+                StationPickerScreen(
+                    self.radio_service,
+                    current_station_id=current_id,
+                    current_station_name=current_name,
+                ),
                 self._on_station_selected,
             )
 
