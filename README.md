@@ -66,8 +66,9 @@ muzo [-c PATH] [-s SCENE] [-f] [-v]
 
 ### Configuration
 
-muzo reads an optional TOML file and updates it when you change world, toggle focus mode or pick a station.
-On launch it remembers your last station; press `Space` to play it, or set `autoplay = true`:
+muzo reads an optional TOML file, and updates it when you change world, toggle focus mode or pick
+a station. It remembers your last station: on launch press `Space` to play it, or set
+`autoplay = true` to start it automatically.
 
 - macOS: `~/Library/Application Support/muzo/config.toml`
 - Linux: `~/.config/muzo/config.toml`
@@ -76,11 +77,10 @@ On launch it remembers your last station; press `Space` to play it, or set `auto
 scene = "rainy-window"   # rainy-window | horizon | stargazing | fireplace
 volume = 70              # 0-100
 animation_fps = 10       # 1-30
-show_controls = true
 focus_mode = false
 reduce_motion = false    # calmer, less animated scenes
 autoplay = false         # start the last station automatically on launch
-station = "<id>"         # last station; set automatically when you pick one
+# station = "<id>"      # last station; set automatically when you pick one
 ```
 
 ### Notes
