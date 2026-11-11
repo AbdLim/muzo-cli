@@ -13,7 +13,13 @@ from muzo.radio.models import Station
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_BASE_URL = "https://de1.api.radio-browser.info"
+DEFAULT_BASE_URLS: tuple[str, ...] = (
+    "https://de1.api.radio-browser.info",
+    "https://de2.api.radio-browser.info",
+    "https://fi1.api.radio-browser.info",
+    "https://at1.api.radio-browser.info",
+)
+DEFAULT_BASE_URL = DEFAULT_BASE_URLS[0]
 DEFAULT_USER_AGENT = f"muzo/{__version__} (terminal ambient radio)"
 DEFAULT_TIMEOUT = httpx.Timeout(timeout=10.0, connect=5.0)
 
@@ -45,11 +51,14 @@ class RadioBrowserClient:
 
     def __init__(
         self,
-        base_url: str = DEFAULT_BASE_URL,
+        base_url: str | Sequence[str] = DEFAULT_BASE_URLS,
         *,
         client: httpx.AsyncClient | None = None,
     ) -> None:
-        self._base_url = base_url.rstrip("/")
+        urls = [base_url] if isinstance(base_url, str) else list(base_url)
+        self._base_urls = [u.rstrip("/") for u in urls if u.strip()]
+        if not self._base_urls:
+            raise ValueError("At least one radio directory base URL is required.")
         self._external_client = client is not None
         self._client = client or httpx.AsyncClient(
             headers={"User-Agent": DEFAULT_USER_AGENT},
@@ -87,7 +96,6 @@ class RadioBrowserClient:
             RadioNetworkError: If connection or timeout occurs.
             RadioResponseError: If the server returns an error or invalid payload.
         """
-        endpoint = f"{self._base_url}/json/stations/search"
         params = {
             "tag": tag,
             "hidebroken": "true",
@@ -96,17 +104,7 @@ class RadioBrowserClient:
             "reverse": "true",
         }
 
-        try:
-            response = await self._client.get(endpoint, params=params)
-            response.raise_for_status()
-        except httpx.TimeoutException as err:
-            raise RadioNetworkError(f"Connection to radio directory timed out: {err}") from err
-        except httpx.NetworkError as err:
-            raise RadioNetworkError(f"Network error connecting to radio directory: {err}") from err
-        except httpx.HTTPStatusError as err:
-            raise RadioResponseError(
-                f"Radio directory returned HTTP {err.response.status_code}"
-            ) from err
+        response = await self._get("/json/stations/search", params=params)
 
         try:
             payload = response.json()
@@ -120,13 +118,52 @@ class RadioBrowserClient:
 
         return self._parse_stations(payload)
 
+    async def _get(self, path: str, params: dict[str, str] | None = None) -> httpx.Response:
+        """GET a path, falling back through the configured mirrors on failure.
+
+        Network errors, timeouts and HTTP 5xx move on to the next mirror; the mirror that
+        last succeeded is tried first next time. Other HTTP errors (e.g. 4xx) are not retried.
+        """
+        last_error: RadioError | None = None
+        for base in list(self._base_urls):
+            try:
+                response = await self._client.get(f"{base}{path}", params=params)
+                response.raise_for_status()
+            except httpx.TimeoutException as err:
+                last_error = RadioNetworkError(f"Connection to radio directory timed out: {err}")
+                last_error.__cause__ = err
+                logger.debug("Mirror %s timed out: %s", base, err)
+                continue
+            except httpx.NetworkError as err:
+                last_error = RadioNetworkError(
+                    f"Network error connecting to radio directory: {err}"
+                )
+                last_error.__cause__ = err
+                logger.debug("Mirror %s unreachable: %s", base, err)
+                continue
+            except httpx.HTTPStatusError as err:
+                status = err.response.status_code
+                last_error = RadioResponseError(f"Radio directory returned HTTP {status}")
+                last_error.__cause__ = err
+                if status >= 500:
+                    logger.debug("Mirror %s returned HTTP %s", base, status)
+                    continue
+                raise last_error from err
+
+            if base != self._base_urls[0]:
+                self._base_urls.remove(base)
+                self._base_urls.insert(0, base)
+            return response
+
+        assert last_error is not None
+        raise last_error
+
     async def record_click(self, station_id: str) -> None:
         """Notify the directory of a station play event (fire-and-forget)."""
         if not station_id or not station_id.strip():
             return
-        endpoint = f"{self._base_url}/json/url/{station_id.strip()}"
         try:
-            await self._client.get(endpoint)
+            await self._get(f"/json/url/{station_id.strip()}")
         except Exception as err:
             logger.debug("Failed to record station click for %s: %s", station_id, err)
 
