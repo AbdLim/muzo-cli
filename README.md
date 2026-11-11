@@ -4,13 +4,27 @@ An ambient internet radio player for your terminal.
 
 Pair chill lofi and ambient streaming stations with cozy procedural ASCII art worlds right in your shell.
 
+<!-- TODO: add a demo GIF / asciinema recording here -->
+
+## Install
+
 ```bash
-# Quickstart with uv
+# Install as a tool straight from GitHub (needs uv: https://docs.astral.sh/uv/)
+uv tool install git+https://github.com/AbdLim/muzo-cli
+
+muzo
+```
+
+Or run from a clone:
+
+```bash
+git clone https://github.com/AbdLim/muzo-cli && cd muzo-cli
 uv run muzo
 ```
 
 ### Requirements
 
+- macOS or Linux (Windows is not supported yet)
 - Python >= 3.12
 - [mpv](https://mpv.io) (for live audio playback)
   - macOS: `brew install mpv`
@@ -36,4 +50,49 @@ Muzo features four procedurally animated worlds:
 - **Stargazing** — Serene mountain silhouettes under twinkling stars and occasional shooting stars.
 - **Fireplace** — A cozy crackling brick hearth with dancing flames and rising embers.
 
-*Note: Radio stations are discovered via the community Radio Browser directory. More soundscapes and features coming soon!*
+Switch worlds with `s`, or start in one with `muzo --scene fireplace`
+(ids: `rainy-window`, `horizon`, `stargazing`, `fireplace`).
+
+### Command line
+
+```
+muzo [-c PATH] [-s SCENE] [-f] [-v]
+
+  -c, --config PATH   Use an explicit TOML config file
+  -s, --scene SCENE   Start in the given world
+  -f, --focus         Start in full-screen focus mode
+  -v, --version       Show version
+```
+
+### Configuration
+
+muzo reads an optional TOML file and updates it when you change world or toggle focus mode:
+
+- macOS: `~/Library/Application Support/muzo/config.toml`
+- Linux: `~/.config/muzo/config.toml`
+
+```toml
+scene = "rainy-window"   # rainy-window | horizon | stargazing | fireplace
+volume = 70              # 0-100
+animation_fps = 10       # 1-30
+show_controls = true
+focus_mode = false
+reduce_motion = false    # calmer, less animated scenes
+```
+
+### Notes
+
+Radio stations are discovered via the community [Radio Browser](https://www.radio-browser.info/)
+directory, with automatic fallback between its mirror servers. Audio is played by `mpv`.
+
+## Development
+
+```bash
+uv sync --all-groups
+uv run pytest
+uv run ruff check . && uv run ruff format --check .
+```
+
+## License
+
+[MIT](LICENSE)

@@ -3,6 +3,20 @@ name = "muzo"
 version = "0.1.0"
 description = "An ambient internet radio experience in your terminal"
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["radio", "terminal", "tui", "lofi", "ambient", "ascii", "textual"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Sound/Audio :: Players",
+]
 authors = [
     { name = "Abdulalim Ladan", email = "aaladan453@gmail.com" }
 ]
@@ -12,6 +26,11 @@ dependencies = [
     "platformdirs>=4.13.5",
     "textual>=8.2.8",
 ]
+
+[project.urls]
+Homepage = "https://github.com/AbdLim/muzo-cli"
+Repository = "https://github.com/AbdLim/muzo-cli"
+Issues = "https://github.com/AbdLim/muzo-cli/issues"
 
 [project.scripts]
 muzo = "muzo.cli:main"
