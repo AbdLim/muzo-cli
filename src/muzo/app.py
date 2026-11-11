@@ -185,7 +185,8 @@ class MuzoApp(App[None]):
 
         try:
             new_scene = self.registry.create(scene_id)
-        except Exception:
+        except Exception as err:
+            self.notify(f"Could not load world '{scene_id}': {err}", severity="error")
             return
 
         self._active_scene = new_scene
@@ -201,12 +202,8 @@ class MuzoApp(App[None]):
         except Exception:
             pass
 
-        # Persist scene preference
         self.config = dataclasses.replace(self.config, scene=scene_id)
-        try:
-            save_config(self.config)
-        except Exception:
-            pass
+        self._persist_config()
 
     def action_toggle_focus_mode(self) -> None:
         """Toggle full-screen focus mode on and off."""
@@ -217,10 +214,14 @@ class MuzoApp(App[None]):
             self.remove_class("focus-mode")
 
         self.config = dataclasses.replace(self.config, focus_mode=self._is_focus_mode)
+        self._persist_config()
+
+    def _persist_config(self) -> None:
+        """Save preferences, warning the user (rather than failing silently) on error."""
         try:
             save_config(self.config)
-        except Exception:
-            pass
+        except Exception as err:
+            self.notify(f"Could not save preferences: {err}", severity="warning")
 
     def action_open_station_picker(self) -> None:
         """Open the radio station picker modal."""

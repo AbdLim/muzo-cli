@@ -84,3 +84,11 @@ def test_invalid_reduce_motion_type(tmp_path: Path):
 
     with pytest.raises(ConfigError, match="reduce_motion.*must be a boolean"):
         load_config(config_file, explicit=True)
+
+
+def test_save_config_escapes_special_characters(tmp_path: Path):
+    """Quotes and backslashes in values round-trip instead of corrupting the TOML."""
+    config_file = tmp_path / "config.toml"
+    cfg = AppConfig(scene="rainy-window", station='Radio "Chill" \\ Café')
+    save_config(cfg, config_file)
+    assert load_config(config_file, explicit=True).station == 'Radio "Chill" \\ Café'

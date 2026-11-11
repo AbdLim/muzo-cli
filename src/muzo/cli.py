@@ -1,6 +1,7 @@
 """Command line interface for Muzo."""
 
 import argparse
+import dataclasses
 import sys
 from pathlib import Path
 
@@ -63,12 +64,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         config = load_config(args.config, explicit=args.config is not None)
         if args.scene is not None:
-            import dataclasses
-
             config = dataclasses.replace(config, scene=args.scene)
         if args.focus:
-            import dataclasses
-
             config = dataclasses.replace(config, focus_mode=True)
 
         registry = create_default_registry()

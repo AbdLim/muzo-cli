@@ -1,5 +1,6 @@
 """Configuration management for Muzo."""
 
+import json
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
@@ -148,6 +149,11 @@ def load_config(path: Path | None = None, explicit: bool = False) -> AppConfig:
     return AppConfig(**allowed_fields)
 
 
+def _toml_string(value: str) -> str:
+    """Encode a string as a TOML basic string (JSON escaping is a valid subset)."""
+    return json.dumps(value, ensure_ascii=False)
+
+
 def save_config(config: AppConfig, path: Path | None = None) -> None:
     """Save configuration atomically to the destination path or platform default."""
     config_path = path or get_default_config_path()
@@ -159,7 +165,7 @@ def save_config(config: AppConfig, path: Path | None = None) -> None:
         ) from err
 
     lines = [
-        f'scene = "{config.scene}"',
+        f"scene = {_toml_string(config.scene)}",
         f"volume = {config.volume}",
         f"animation_fps = {config.animation_fps}",
         f"show_controls = {str(config.show_controls).lower()}",
@@ -167,7 +173,7 @@ def save_config(config: AppConfig, path: Path | None = None) -> None:
         f"reduce_motion = {str(config.reduce_motion).lower()}",
     ]
     if config.station is not None:
-        lines.append(f'station = "{config.station}"')
+        lines.append(f"station = {_toml_string(config.station)}")
 
     content = "\n".join(lines) + "\n"
 
