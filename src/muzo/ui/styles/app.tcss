@@ -123,7 +123,7 @@ StationPickerScreen {
 }
 
 #picker-moods {
-    height: 1;
+    height: auto;
     margin-bottom: 1;
     text-align: center;
 }

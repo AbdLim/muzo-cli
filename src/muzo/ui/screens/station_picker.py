@@ -80,12 +80,12 @@ class StationPickerScreen(ModalScreen[Station | None]):
         for idx, mood in enumerate(self._moods):
             num = idx + 1
             if idx == self._active_mood_idx:
-                text.append(f" [{num}] ", style="bold #14171a on #7eb6ad")
-                text.append(f" {mood.name} ", style="bold #7eb6ad")
+                text.append(f" {num} ", style="bold #14171a on #7eb6ad")
+                text.append(f" {mood.name}", style="bold #7eb6ad")
             else:
-                text.append(f" [{num}] {mood.name} ", style="#596573")
+                text.append(f" {num} {mood.name}", style="#596573")
             if idx < len(self._moods) - 1:
-                text.append(" • ", style="#2e3846")
+                text.append("  ", style="#2e3846")
 
         self._mood_static.update(text)
 
