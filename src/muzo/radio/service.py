@@ -57,6 +57,10 @@ class RadioService:
         self._cache[cache_key] = (now, collected)
         return collected
 
+    async def get_station(self, station_id: str) -> Station | None:
+        """Resolve a station by id (e.g. the one remembered from the last session)."""
+        return await self._client.get_station(station_id)
+
     async def record_click(self, station_id: str) -> None:
         """Record a play event for the given station."""
         await self._client.record_click(station_id)

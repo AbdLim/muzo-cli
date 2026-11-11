@@ -22,6 +22,7 @@ class AppConfig:
     show_controls: bool = True
     focus_mode: bool = False
     reduce_motion: bool = False
+    autoplay: bool = False
 
 
 _ALLOWED_KEYS: frozenset[str] = frozenset(
@@ -33,6 +34,7 @@ _ALLOWED_KEYS: frozenset[str] = frozenset(
         "show_controls",
         "focus_mode",
         "reduce_motion",
+        "autoplay",
         "visuals",
         "audio",
     }
@@ -95,6 +97,11 @@ def validate_config_dict(data: dict[str, Any]) -> None:
         reduce_motion = data["reduce_motion"]
         if not isinstance(reduce_motion, bool):
             raise ConfigError("Configuration key 'reduce_motion' must be a boolean.")
+
+    if "autoplay" in data:
+        autoplay = data["autoplay"]
+        if not isinstance(autoplay, bool):
+            raise ConfigError("Configuration key 'autoplay' must be a boolean.")
 
 
 def load_config(path: Path | None = None, explicit: bool = False) -> AppConfig:
@@ -171,6 +178,7 @@ def save_config(config: AppConfig, path: Path | None = None) -> None:
         f"show_controls = {str(config.show_controls).lower()}",
         f"focus_mode = {str(config.focus_mode).lower()}",
         f"reduce_motion = {str(config.reduce_motion).lower()}",
+        f"autoplay = {str(config.autoplay).lower()}",
     ]
     if config.station is not None:
         lines.append(f"station = {_toml_string(config.station)}")

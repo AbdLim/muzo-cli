@@ -17,7 +17,7 @@ class WelcomeScene(Scene):
         ("", None),
         ("your ambient terminal radio", "#d0d0d0"),
         ("", None),
-        ("music and worlds are coming", "#888888"),
+        ("press r to choose a station", "#888888"),
     )
 
     def render(self, width: int, height: int) -> Frame:

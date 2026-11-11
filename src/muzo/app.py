@@ -118,15 +118,20 @@ class MuzoApp(App[None]):
 
         yield PlayerStatusWidget(controller=self.controller, id="player-status")
 
+        yield Static(
+            "[dim]press [/dim][#7eb6ad][b]r[/b][/][dim] to pick a station and listen[/dim]",
+            id="start-hint",
+        )
+
         with Horizontal(id="footer"):
             yield Static(
-                "[#7eb6ad][b]r[/b][/] [dim]Stations[/dim]   "
-                "[#7eb6ad][b]s[/b][/] [dim]Worlds[/dim]   "
-                "[#7eb6ad][b]f[/b][/] [dim]Focus[/dim]   "
-                "[#7eb6ad][b]Space[/b][/] [dim]Pause[/dim]   "
-                "[#7eb6ad][b]+/-[/b][/] [dim]Vol[/dim]   "
-                "[#7eb6ad][b]x[/b][/] [dim]Stop[/dim]   "
-                "[#7eb6ad][b]?[/b][/] [dim]Help[/dim]   "
+                "[#7eb6ad][b]r[/b][/] [dim]Stations[/dim]  "
+                "[#7eb6ad][b]s[/b][/] [dim]Worlds[/dim]  "
+                "[#7eb6ad][b]f[/b][/] [dim]Focus[/dim]  "
+                "[#7eb6ad][b]Space[/b][/] [dim]Pause[/dim]  "
+                "[#7eb6ad][b]+/-[/b][/] [dim]Vol[/dim]  "
+                "[#7eb6ad][b]x[/b][/] [dim]Stop[/dim]  "
+                "[#7eb6ad][b]?[/b][/] [dim]Help[/dim]  "
                 "[#7eb6ad][b]q[/b][/] [dim]Quit[/dim]",
                 id="footer-keys",
             )
@@ -137,6 +142,22 @@ class MuzoApp(App[None]):
             self.add_class("focus-mode")
         self.controller.add_listener(self._on_player_state_change)
         self._on_player_state_change(self.controller.state)
+        if self.config.station:
+            self.run_worker(self._restore_last_station(self.config.station))
+
+    async def _restore_last_station(self, station_id: str) -> None:
+        """Look up the station remembered from last time; preload it, or play if autoplay."""
+        try:
+            station = await self.radio_service.get_station(station_id)
+        except Exception as err:
+            self.notify(f"Couldn't restore your last station: {err}", severity="warning")
+            return
+        if station is None or self.controller.state.station is not None:
+            return
+        if self.config.autoplay:
+            await self.controller.play_station(station)
+        else:
+            self.controller.preload_station(station)
 
     def on_unmount(self) -> None:
         """Unregister player state listener when unmounting."""
@@ -144,6 +165,10 @@ class MuzoApp(App[None]):
 
     def _on_player_state_change(self, state: PlaybackState) -> None:
         """Update top header bar station display and app title when stream state changes."""
+        try:
+            self.query_one("#start-hint").display = state.station is None
+        except Exception:
+            pass
         try:
             station_label = self.query_one("#header-station", Label)
             if state.station is not None:
@@ -242,13 +267,20 @@ class MuzoApp(App[None]):
         """Handle station chosen from picker."""
         if station is not None:
             self.run_worker(self.controller.play_station(station))
+            if self.config.station != station.id:
+                self.config = dataclasses.replace(self.config, station=station.id)
+                self._persist_config()
 
     def action_toggle_pause(self) -> None:
-        """Toggle play/pause on the active stream, or open picker if none loaded."""
+        """Toggle pause; start the loaded station if stopped, or open picker if none."""
         if self.controller.state.station is None:
             self.action_open_station_picker()
             return
-        self.run_worker(self.controller.toggle_pause())
+        station = self.controller.state.station
+        if self.controller.state.status in (PlaybackStatus.STOPPED, PlaybackStatus.ERROR):
+            self.run_worker(self.controller.play_station(station))
+        else:
+            self.run_worker(self.controller.toggle_pause())
 
     def action_stop_audio(self) -> None:
         """Stop current stream."""

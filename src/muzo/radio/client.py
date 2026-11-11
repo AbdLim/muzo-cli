@@ -4,7 +4,7 @@ import logging
 import re
 from collections.abc import Sequence
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 import httpx
 
@@ -117,6 +117,26 @@ class RadioBrowserClient:
             raise RadioResponseError("Expected list of stations from radio directory.")
 
         return self._parse_stations(payload)
+
+    async def get_station(self, station_id: str) -> Station | None:
+        """Look up a single station by its Radio Browser UUID.
+
+        Returns None if the directory has no valid station with that id.
+        """
+        clean_id = station_id.strip()
+        if not clean_id:
+            return None
+        response = await self._get(f"/json/stations/byuuid/{quote(clean_id, safe='')}")
+        try:
+            payload = response.json()
+        except Exception as err:
+            raise RadioResponseError(
+                f"Malformed JSON response from radio directory: {err}"
+            ) from err
+        if not isinstance(payload, list):
+            raise RadioResponseError("Expected list of stations from radio directory.")
+        stations = self._parse_stations(payload)
+        return stations[0] if stations else None
 
     async def _get(self, path: str, params: dict[str, str] | None = None) -> httpx.Response:
         """GET a path, falling back through the configured mirrors on failure.

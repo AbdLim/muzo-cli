@@ -121,3 +121,10 @@ def test_nonexistent_implicit_path_does_not_raise(tmp_path):
     missing = tmp_path / "missing.toml"
     config = load_config(missing, explicit=False)
     assert config == AppConfig()
+
+
+def test_autoplay_must_be_boolean(tmp_path):
+    cfg = tmp_path / "autoplay.toml"
+    cfg.write_text('autoplay = "yes"\n')
+    with pytest.raises(ConfigError, match="autoplay"):
+        load_config(cfg, explicit=True)

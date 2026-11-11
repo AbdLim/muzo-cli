@@ -122,6 +122,11 @@ class PlayerController:
             elif prop_name == "volume" and isinstance(prop_val, (int, float)):
                 self._update_state(volume=int(prop_val))
 
+    def preload_station(self, station: Station) -> None:
+        """Select a station without starting playback (Space will then play it)."""
+        if self._state.station is None:
+            self._update_state(status=PlaybackStatus.STOPPED, station=station)
+
     async def play_station(self, station: Station) -> None:
         """Switch audio playback to the specified station."""
         async with self._lock:

@@ -196,3 +196,28 @@ async def test_all_mirrors_down_raises_network_error():
         client = RadioBrowserClient(["https://a.mirror", "https://b.mirror"], client=http_client)
         with pytest.raises(RadioNetworkError):
             await client.search_stations(tag="x")
+
+
+@pytest.mark.asyncio
+async def test_get_station_by_uuid():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/json/stations/byuuid/abc-123"
+        return httpx.Response(
+            200,
+            json=[{"stationuuid": "abc-123", "name": "Found FM", "url": "https://f.test/s"}],
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http_client:
+        client = RadioBrowserClient("https://mock.api", client=http_client)
+        station = await client.get_station("abc-123")
+        assert station is not None and station.name == "Found FM"
+
+
+@pytest.mark.asyncio
+async def test_get_station_missing_returns_none():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=[])
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http_client:
+        client = RadioBrowserClient("https://mock.api", client=http_client)
+        assert await client.get_station("nope") is None

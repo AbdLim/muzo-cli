@@ -69,7 +69,14 @@ class PlayerStatusWidget(Widget):
 
         station_name = state.station.name if state.station else "station"
 
-        if state.status == PlaybackStatus.STOPPED:
+        if state.status == PlaybackStatus.STOPPED and state.station is not None:
+            left_text.append("Ready: ", style="#7e8a97")
+            left_text.append(station_name, style="bold #7eb6ad")
+            left_text.append(" · Press ", style="#7e8a97")
+            left_text.append("Space", style="bold #7eb6ad")
+            left_text.append(" to play", style="#7e8a97")
+
+        elif state.status == PlaybackStatus.STOPPED:
             left_text.append("Not streaming · Press ", style="#7e8a97")
             left_text.append("r", style="bold #7eb6ad")
             left_text.append(" to choose a station", style="#7e8a97")

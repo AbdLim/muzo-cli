@@ -36,7 +36,7 @@ uv run muzo
 - `r` — Browse & select radio stations
 - `s` — Switch ambient visual worlds
 - `f` — Toggle full-screen focus mode
-- `Space` — Toggle pause / resume stream
+- `Space` — Toggle pause / resume stream (or play the remembered station)
 - `x` — Stop playback
 - `+` / `-` — Volume up / down
 - `?` — Toggle help overlay
@@ -66,7 +66,8 @@ muzo [-c PATH] [-s SCENE] [-f] [-v]
 
 ### Configuration
 
-muzo reads an optional TOML file and updates it when you change world or toggle focus mode:
+muzo reads an optional TOML file and updates it when you change world, toggle focus mode or pick a station.
+On launch it remembers your last station; press `Space` to play it, or set `autoplay = true`:
 
 - macOS: `~/Library/Application Support/muzo/config.toml`
 - Linux: `~/.config/muzo/config.toml`
@@ -78,6 +79,8 @@ animation_fps = 10       # 1-30
 show_controls = true
 focus_mode = false
 reduce_motion = false    # calmer, less animated scenes
+autoplay = false         # start the last station automatically on launch
+station = "<id>"         # last station; set automatically when you pick one
 ```
 
 ### Notes

@@ -167,3 +167,84 @@ async def test_app_resize_narrow():
         assert pilot.app.size == Size(40, 12)
         scene_view = pilot.app.query_one(SceneView)
         assert scene_view is not None
+
+
+async def _make_app(config=None, stations=None):
+    engine = MockEngine()
+    controller = PlayerController(engine=engine)
+    service = RadioService(client=MockRadioClient())
+    app = MuzoApp(config=config, controller=controller, radio_service=service)
+    return app, engine
+
+
+@pytest.mark.asyncio
+async def test_start_hint_visible_until_station_chosen():
+    app, _ = await _make_app()
+    async with app.run_test() as pilot:
+        hint = app.query_one("#start-hint")
+        assert hint.display is True
+        app.controller.preload_station(
+            Station(id="s", name="S", stream_url="https://s.test/stream")
+        )
+        await pilot.pause()
+        assert hint.display is False
+
+
+@pytest.mark.asyncio
+async def test_selecting_station_remembers_it(isolated_default_config):
+    from muzo.config import load_config
+
+    app, engine = await _make_app()
+    async with app.run_test() as pilot:
+        station = Station(id="test-station-1", name="Chillhop Beats", stream_url="https://c.test/s")
+        app._on_station_selected(station)
+        await pilot.pause()
+        assert app.config.station == "test-station-1"
+    assert load_config(isolated_default_config, explicit=True).station == "test-station-1"
+
+
+@pytest.mark.asyncio
+async def test_last_station_is_preloaded_not_autoplayed():
+    from muzo.config import AppConfig
+
+    class LookupClient(MockRadioClient):
+        async def get_station(self, station_id):
+            return Station(id=station_id, name="Remembered FM", stream_url="https://r.test/s")
+
+    engine = MockEngine()
+    app = MuzoApp(
+        config=AppConfig(station="abc"),
+        controller=PlayerController(engine=engine),
+        radio_service=RadioService(client=LookupClient()),
+    )
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        await pilot.pause()
+        state = app.controller.state
+        assert state.station is not None and state.station.name == "Remembered FM"
+        assert state.status == PlaybackStatus.STOPPED
+        assert engine.commands == []
+
+        await pilot.press("space")
+        await pilot.pause()
+        assert engine.commands == ["loadfile:https://r.test/s"]
+
+
+@pytest.mark.asyncio
+async def test_autoplay_starts_last_station():
+    from muzo.config import AppConfig
+
+    class LookupClient(MockRadioClient):
+        async def get_station(self, station_id):
+            return Station(id=station_id, name="Remembered FM", stream_url="https://r.test/s")
+
+    engine = MockEngine()
+    app = MuzoApp(
+        config=AppConfig(station="abc", autoplay=True),
+        controller=PlayerController(engine=engine),
+        radio_service=RadioService(client=LookupClient()),
+    )
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        await pilot.pause()
+        assert engine.commands == ["loadfile:https://r.test/s"]
